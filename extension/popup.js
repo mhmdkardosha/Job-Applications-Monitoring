@@ -31,6 +31,16 @@ function getToken() {
 
 // Runs in the page; must be self-contained (serialized by executeScript).
 function extractJobData() {
+  const textFromHtml = (html) => {
+    const div = document.createElement("div");
+    div.innerHTML = String(html || "");
+    div.querySelectorAll("script, style").forEach((el) => el.remove());
+    div.querySelectorAll("br").forEach((el) => el.replaceWith("\n"));
+    div.querySelectorAll("p, li, h1, h2, h3, h4, h5, h6, div, section")
+      .forEach((el) => el.append("\n"));
+    return (div.textContent || "").split("\n").map((line) => line.trim())
+      .filter(Boolean).join("\n");
+  };
   const out = {
     url: location.href,
     resolved_url: location.href,
@@ -64,9 +74,7 @@ function extractJobData() {
     out.company = org ? String(org.name || org) : out.company;
     const ident = p.identifier;
     out.job_identifier = ident ? String(ident.value || ident) : "";
-    const div = document.createElement("div");
-    div.innerHTML = p.description || "";
-    out.description = (div.textContent || div.innerText || "").trim();
+    out.description = textFromHtml(p.description);
     out.capture_state = "structured";
     if (p.employmentType) out.employment_type = String(p.employmentType);
     if (String(p.jobLocationType || "").toLowerCase().includes("telecommute")) {
@@ -84,6 +92,34 @@ function extractJobData() {
       const amount = [v.minValue, v.maxValue].filter((x) => x != null).join(" - ") || v.value || "";
       out.compensation = [sal.currency, amount, v.unitText].filter(Boolean).join(" ");
     }
+  }
+  const wrappedTitle = out.title.match(/^Job Application for (.+) at (.+) - Career['’]s Page$/i);
+  if (wrappedTitle && (!out.company || wrappedTitle[2].toLowerCase() === out.company.toLowerCase())) {
+    out.title = wrappedTitle[1];
+  }
+  const jobBody = [...document.querySelectorAll(
+    '[data-testid="job-description"], [data-test="jobDescriptionContent"], ' +
+    '#job-description, .job-description, .jobs-description-content__text, ' +
+    '.show-more-less-html__markup, [class*="jobDescription"]'
+  )].map((el) => (el.innerText || "").trim())
+    .filter((text) => text.length >= 200)
+    .sort((a, b) => b.length - a.length)[0];
+  if (jobBody && jobBody.length > out.description.length * 1.2) {
+    out.description = jobBody;
+  }
+  if (postings.length) {
+    const posting = postings[0];
+    const supplements = [];
+    for (const [field, heading] of [["responsibilities", "Responsibilities"], ["skills", "Required skills"]]) {
+      const value = posting[field];
+      const items = Array.isArray(value) ? value : [value];
+      const text = items.filter((item) => typeof item === "string")
+        .map(textFromHtml).filter(Boolean).join("\n");
+      if (text && !out.description.toLowerCase().includes(text.toLowerCase())) {
+        supplements.push(`${heading}\n${text}`);
+      }
+    }
+    if (supplements.length) out.description = `${supplements.join("\n")}\n${out.description}`.trim();
   }
   if (!out.description) {
     const main = document.querySelector("main, article, [role=main], body");

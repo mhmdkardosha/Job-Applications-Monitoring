@@ -59,6 +59,23 @@ def test_store_capture_creates_application_and_snapshot():
     assert snapshot.requirements["required_skills"] == ["Python"]
 
 
+def test_capture_adds_only_source_grounded_skills_and_duties(monkeypatch):
+    class FakeRequirements:
+        def to_json(self):
+            return {
+                "responsibilities": ["Design reliable APIs", "Manage a team"],
+                "required_skills": ["PostgreSQL", "Kubernetes"],
+            }
+
+    monkeypatch.setattr(capture_service, "extract_requirements", lambda client, text: FakeRequirements())
+    snapshot, _, _ = capture_service.store_capture(
+        _data(description="Design reliable APIs using Python and PostgreSQL."),
+        client=object(),
+    )
+    assert snapshot.requirements["responsibilities"] == ["Ship services", "Design reliable APIs"]
+    assert snapshot.requirements["required_skills"] == ["Python", "PostgreSQL"]
+
+
 def test_store_capture_links_existing_by_url():
     existing = Application.objects.create(
         company="Acme Corp", title="Backend", job_url="https://boards.greenhouse.io/acme/jobs/1"

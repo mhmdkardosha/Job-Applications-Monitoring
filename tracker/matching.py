@@ -75,6 +75,15 @@ def _norm(value: str) -> str:
     return re.sub(r"\s+", " ", (value or "").strip().lower())
 
 
+def _role_key(title: str, company: str) -> str:
+    role = _norm(title).replace("’", "'")
+    prefix = "job application for "
+    suffix = f" at {_norm(company)} - career's page"
+    if role.startswith(prefix) and role.endswith(suffix):
+        return role[len(prefix) : -len(suffix)]
+    return role
+
+
 def _job_url_key(value: str) -> str:
     normalized = _norm(value).rstrip("/")
     if not normalized:
@@ -125,27 +134,15 @@ def find_matches(extraction: EmailExtraction, email: Email) -> list[Match]:
     return list(matches.values())
 
 
-def find_identical(extraction: EmailExtraction) -> Application | None:
-    """An existing application with the same normalized company + title."""
-    if not extraction.company or not extraction.role:
-        return None
-    company_key = normalize_company(extraction.company)
-    role_key = _norm(extraction.role)
-    for app in Application.objects.filter(title__iexact=extraction.role.strip()):
-        if _norm(app.title) == role_key and normalize_company(app.company) == company_key:
-            return app
-    return None
-
-
 def weak_candidates(extraction: EmailExtraction) -> list[Match]:
-    """Company + exact title suggestions, offered in review but never auto-applied."""
+    """Company + role suggestions, including known job-board title wrappers."""
     if not extraction.company or not extraction.role:
         return []
     company_key = normalize_company(extraction.company)
-    role_key = _norm(extraction.role)
+    role_key = _role_key(extraction.role, extraction.company)
     suggestions: list[Match] = []
-    for app in Application.objects.filter(title__iexact=extraction.role.strip()):
-        if _norm(app.title) == role_key and normalize_company(app.company) == company_key:
+    for app in Application.objects.filter(title__icontains=extraction.role.strip()):
+        if _role_key(app.title, app.company) == role_key and normalize_company(app.company) == company_key:
             suggestions.append(Match(app, "company + title", strong=False))
     return suggestions
 
@@ -232,16 +229,23 @@ def decide(extraction: EmailExtraction, email: Email) -> Decision:
         and extraction.confidence >= MIN_CREATE_CONFIDENCE
         and not extraction.needs_review
     ):
-        identical = find_identical(extraction)
-        if identical is not None:
-            apply_now = not (target and is_regression(identical.stage, target))
+        if len(weak) == 1:
+            existing = weak[0].application
+            apply_now = not (target and is_regression(existing.stage, target))
             return Decision(
                 Action.AUTO_UPDATE,
                 "identical existing application",
-                application=identical,
+                application=existing,
                 target_stage=target,
                 apply_now=apply_now,
                 weak_candidates=weak,
+            )
+        if weak:
+            return Decision(
+                Action.REVIEW,
+                "multiple matching applications",
+                weak_candidates=weak,
+                review_kind="ambiguous",
             )
         return Decision(
             Action.AUTO_CREATE,

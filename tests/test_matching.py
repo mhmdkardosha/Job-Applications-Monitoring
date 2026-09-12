@@ -165,6 +165,31 @@ def test_decide_confirmation_for_identical_existing_links(email):
     assert decision.reason == "identical existing application"
 
 
+def test_decide_confirmation_matches_captured_job_board_title(email):
+    app = Application.objects.create(
+        company="Perpay",
+        title="Job Application for Data Science Internship, Summer 2027 at Perpay - Career's Page",
+        job_url="https://job-boards.greenhouse.io/perpay/jobs/4076978007",
+    )
+    decision = decide(make_extraction(
+        company="Perpay",
+        role="Data Science Internship, Summer 2027",
+        links=["https://perpay.com/company"],
+    ), email)
+    assert decision.action == Action.AUTO_UPDATE
+    assert decision.application.pk == app.pk
+
+
+def test_decide_confirmation_reviews_multiple_same_role_candidates(email):
+    for _ in range(2):
+        Application.objects.create(company="Perpay", title="Data Science Internship, Summer 2027")
+    decision = decide(make_extraction(
+        company="Perpay", role="Data Science Internship, Summer 2027"
+    ), email)
+    assert decision.action == Action.REVIEW
+    assert decision.review_kind == "ambiguous"
+
+
 def test_decide_confirmation_without_role_goes_to_review(email):
     decision = decide(make_extraction(requisition_id="", role=""), email)
     assert decision.action == Action.REVIEW

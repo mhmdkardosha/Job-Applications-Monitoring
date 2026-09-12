@@ -50,16 +50,28 @@ LIST_REQUIREMENT_FIELDS = (
 
 def _requirements_from_structured(data: dict[str, Any]) -> dict[str, Any]:
     req = {key: data.get(key) or "" for key in SCALAR_REQUIREMENT_FIELDS}
-    req.update({key: data.get(key) or [] for key in LIST_REQUIREMENT_FIELDS})
+    for key in LIST_REQUIREMENT_FIELDS:
+        value = data.get(key)
+        req[key] = value if isinstance(value, list) else [value] if isinstance(value, str) and value.strip() else []
     req["evidence"] = data.get("evidence") or []
     return req
 
 
-def _merge_requirements(structured: dict, enrichment: dict) -> dict:
+def _merge_requirements(structured: dict, enrichment: dict, description: str) -> dict:
     merged = {**structured, **enrichment}
     for key in (*SCALAR_REQUIREMENT_FIELDS, *LIST_REQUIREMENT_FIELDS):
         if structured.get(key):
             merged[key] = structured[key]
+    source = " ".join(description.casefold().split())
+    for key in ("responsibilities", "required_skills"):
+        items = list(structured.get(key) or [])
+        seen = {" ".join(item.casefold().split()) for item in items}
+        for item in enrichment.get(key) or []:
+            normalized = " ".join(item.casefold().split())
+            if normalized and normalized in source and normalized not in seen:
+                items.append(item)
+                seen.add(normalized)
+        merged[key] = items
     return merged
 
 
@@ -206,7 +218,7 @@ def store_capture(
         try:
             client = client or get_ai_client()
             enrichment = extract_requirements(client, description)
-            requirements = _merge_requirements(structured, enrichment.to_json())
+            requirements = _merge_requirements(structured, enrichment.to_json(), description)
         except Exception as exc:  # noqa: BLE001 - keep the snapshot even if AI fails
             logger.warning("requirements extraction failed: %s", exc)
 

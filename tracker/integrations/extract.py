@@ -87,7 +87,9 @@ Return one JSON object only:
 }
 Rules:
 - Only use information explicitly present in the text. Use empty values otherwise.
-- Do not summarise away specifics; keep each item short and faithful.
+- For responsibilities and skills, copy distinct short phrases from the posting rather than inventing generic duties or competencies.
+- Put duties under responsibilities; put explicitly required tools, technologies, and competencies under required_skills. Keep optional or "nice to have" items under preferred_skills.
+- Preserve specific names and qualifiers. If a category is absent, return an empty list; do not infer it from the job title.
 - Make sure the response is valid json."""
 
 
@@ -270,7 +272,7 @@ class RequirementsExtraction:
 
 
 def extract_requirements(
-    client: DeepSeekClient, posting_text: str, *, max_chars: int = 12000
+    client: DeepSeekClient, posting_text: str, *, max_chars: int = 20000
 ) -> RequirementsExtraction:
     result = client.complete(
         REQUIREMENTS_SYSTEM,

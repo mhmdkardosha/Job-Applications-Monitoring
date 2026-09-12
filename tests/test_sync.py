@@ -121,6 +121,24 @@ def test_process_email_auto_creates_and_does_not_duplicate(stored_email, monkeyp
     assert Application.objects.count() == 1
 
 
+def test_process_email_links_existing_captured_posting(stored_email, monkeypatch):
+    captured = Application.objects.create(
+        company="Perpay",
+        title="Job Application for Data Science Internship, Summer 2027 at Perpay - Career's Page",
+        job_url="https://job-boards.greenhouse.io/perpay/jobs/4076978007",
+    )
+    monkeypatch.setattr(sync_mod, "extract_email", lambda client, msg: extraction(
+        company="Perpay",
+        role="Data Science Internship, Summer 2027",
+        links=["https://perpay.com/company"],
+    ))
+    sync_mod.process_email(stored_email, object(), sync_mod.SyncReport(account=stored_email.account.email))
+    stored_email.refresh_from_db()
+    assert Application.objects.count() == 1
+    assert stored_email.application_id == captured.pk
+    assert captured.events.filter(email=stored_email).exists()
+
+
 def test_process_email_reuses_versioned_content_cache(account, stored_email, monkeypatch):
     calls = 0
 
