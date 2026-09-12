@@ -9,7 +9,7 @@ The service binds to loopback by default and stores its SQLite database, uploade
 - Today dashboard for overdue work, upcoming tasks/interviews, recent changes, missing postings, and sync health.
 - Searchable, sortable application table plus a stage board and complete application history.
 - Gmail backfill and incremental history sync with safe checkpoints, retries, per-account locking, and an uncertainty review inbox.
-- Immutable posting snapshots from recognized public URLs, pasted text, or the Chromium capture extension.
+- Immutable posting snapshots from recognized public URLs, pasted text, or the Chrome/Brave capture extension.
 - Follow-up drafts and reminders, interview rounds and `.ics` export, contacts, and version-labelled documents.
 - Reports with explicit denominators, response-time samples, source comparisons, and resume-version comparisons.
 - Consistent SQLite-and-media backups, restore verification, CSV export, and local security checks.
@@ -17,7 +17,7 @@ The service binds to loopback by default and stores its SQLite database, uploade
 ## Architecture
 
 ```text
-Browser UI / Chromium extension
+Browser UI / Chrome or Brave extension
               │
               ▼
        Django views and forms
@@ -86,9 +86,9 @@ systemctl --user enable --now job-monitor.service job-monitor-sync.timer job-mon
 
 The sync timer runs after one minute and every five minutes thereafter. The backup timer runs daily. Both catch up after a suspended/off computer when systemd can do so. To keep user services running while logged out, optionally run `loginctl enable-linger "$USER"`.
 
-## Browser capture extension
+## Browser capture extension (Chrome or Brave)
 
-Open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select `extension/`. In the application, open Settings → Browser capture extension, generate a pairing token, and paste it into the popup. The extension uses temporary `activeTab` access and can write only to the local capture endpoint.
+Brave is Chromium-based and supports this same Manifest V3 extension; there is no separate Brave build to keep in sync. Open `brave://extensions` (or `chrome://extensions` in Chrome), enable **Developer mode**, choose **Load unpacked**, and select `extension/`. In the application, open Settings → Browser capture extension, generate a pairing token, and paste it into the popup. The extension uses temporary `activeTab` access and can write only to the local capture endpoint. See [Brave's extension guidance](https://support.brave.com/hc/en-us/articles/360017909112-How-can-I-add-extensions-to-Brave) for browser-specific installation notes.
 
 ## Common operations
 
@@ -117,7 +117,7 @@ Stop the web and sync services before restore. The duplicate command is a dry ru
 - `config/` — Django settings, root URLs, WSGI/ASGI entry points.
 - `tracker/` — models, views, forms, matching, sync, capture, reports, backups, and commands.
 - `templates/`, `static/` — server-rendered interface and local assets.
-- `extension/` — Manifest V3 Chromium posting-capture extension.
+- `extension/` — Manifest V3 Chrome/Brave (Chromium) posting-capture extension.
 - `scripts/` — launcher and user-level systemd units/timers.
 - `fixtures/`, `tests/` — anonymized extraction/capture fixtures and behavior tests.
 - `data/` — ignored runtime database, media, usage records, and backups.

@@ -23,7 +23,7 @@ The runtime has three local processes or entry points:
 - **Gmail sync job:** `manage.py gmail_sync --all` runs as an idempotent, short-lived worker approximately every five minutes.
 - **Backup job:** `manage.py backup --keep 7` creates a consistent SQLite/media archive daily.
 
-The browser extension is a separate Manifest V3 client. It reads the active tab only after the user clicks it, extracts visible/structured posting data, and submits that data to a token-protected loopback endpoint.
+The browser extension is a separate Manifest V3 client for Chrome, Brave, and other Chromium browsers. It reads the active tab only after the user clicks it, extracts visible/structured posting data, and submits that data to a token-protected loopback endpoint. Brave uses the same extension package; maintaining a second Brave-specific copy would add drift without adding capability.
 
 Persistent state is intentionally simple:
 
@@ -86,7 +86,7 @@ flowchart LR
 │   └── migrations/          Django schema history
 ├── templates/               Base layout and tracker pages/partials
 ├── static/                  Shared CSS and vendored local HTMX
-├── extension/               Chromium extension popup and active-tab extractor
+├── extension/               Chrome/Brave (Chromium) popup and active-tab extractor
 ├── scripts/                 Launcher and systemd services/timers
 ├── fixtures/                Synthetic email and posting examples
 ├── tests/                   Behavior and regression tests
@@ -244,7 +244,7 @@ Public URL capture applies a strict safety chain before network access: HTTP(S) 
 
 Extraction prefers schema.org `JobPosting` JSON-LD, then readable page text. AI enrichment fills only absent requirement fields; structured source data wins. Failed or login-only pages are returned as explicit failures and are not persisted as successful snapshots.
 
-The user can also paste the description on an application page. The Chromium extension extracts structured data or visible text from the active tab and submits an editable title/company preview through a revocable token. Original PDFs or screenshots can be retained as linked `Other` documents.
+The user can also paste the description on an application page. The Chrome/Brave extension extracts structured data or visible text from the active tab and submits an editable title/company preview through a revocable token. Original PDFs or screenshots can be retained as linked `Other` documents.
 
 ### Daily workflow and reports
 

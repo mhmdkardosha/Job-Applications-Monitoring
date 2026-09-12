@@ -121,7 +121,7 @@ async function loadCapture() {
     captured = result || {};
   } catch (e) {
     show("capture");
-    els.status.textContent = "Cannot read this page. Chrome pages and PDFs are blocked.";
+    els.status.textContent = "Cannot read this page. Browser-internal pages and PDFs are blocked.";
     els.status.className = "status err";
     return;
   }
