@@ -10,6 +10,7 @@ urlpatterns = [
     path("", views.today, name="today"),
     path("applications/", views.application_list, name="application_list"),
     path("board/", views.application_board, name="application_board"),
+    path("board/card-fields/", views.board_card_fields_save, name="board_card_fields_save"),
     path("applications/new/", views.application_create, name="application_create"),
     path("applications/<int:pk>/", views.application_detail, name="application_detail"),
     path("applications/<int:pk>/edit/", views.application_update, name="application_update"),

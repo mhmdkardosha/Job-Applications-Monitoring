@@ -164,6 +164,8 @@ flowchart LR
 
 The Applications table searches application fields plus stored posting descriptions and requirements. It supports company, role, stage, source, application date, location, work arrangement, priority, tag, archive, and ordering filters. The Board uses the same filtered query when filter parameters are supplied. Board cards can be dragged between all stages, including Rejected and Withdrawn; each card also has a Move to control for keyboard and touch use. Both paths record a user stage change through the same service.
 
+**Board card layout:** The **Customize cards** disclosure on the Board lets the user show or hide priority, application date, location, work arrangement, employment type, salary, source, tags, and closing date. The fields have a fixed order. Company, role, and Move to always appear; priority and application date appear by default. An unknown application date displays “No date” when selected, while other unavailable or unknown values are omitted. The selection is saved in `AppSettings.board_card_fields`, so it applies to every card and persists across sessions and browsers. The POST-only `/board/card-fields/` endpoint validates selected keys and returns to the Board, retaining the current filter URL when safe. Tags are prefetched only when the card layout includes them.
+
 ### Gmail connection and backfill
 
 1. `gmail_connect` starts Google's Desktop OAuth flow with the read-only Gmail scope.

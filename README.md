@@ -7,7 +7,7 @@ The service binds to loopback by default and stores its SQLite database, uploade
 ## Main capabilities
 
 - Today dashboard for overdue work, upcoming tasks/interviews, recent changes, missing postings, and sync health.
-- Searchable, sortable application table plus a stage board and complete application history.
+- Searchable, sortable application table plus a stage board with customizable card details and complete application history.
 - Gmail backfill and incremental history sync with safe checkpoints, retries, per-account locking, and an uncertainty review inbox.
 - Immutable posting snapshots from recognized public URLs, pasted text, or the Chrome/Brave capture extension.
 - Follow-up drafts and reminders, interview rounds and `.ics` export, contacts, and version-labelled documents.
@@ -32,6 +32,8 @@ Browser UI / Chrome or Brave extension
 ```
 
 The UI is server-rendered HTML/CSS with a small amount of JavaScript and HTMX. A user-level systemd timer invokes the same idempotent Gmail sync command every five minutes; no Redis, queue server, or hosted backend is required.
+
+On the Board, use **Customize cards** to choose which details appear on every card. Priority and application date are shown by default; company, role, and the stage-move control always remain visible. The choice is saved for the whole local app.
 
 ## Quick start
 

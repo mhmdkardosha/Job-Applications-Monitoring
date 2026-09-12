@@ -3,19 +3,25 @@ from __future__ import annotations
 import datetime as dt
 
 import pytest
+from bs4 import BeautifulSoup
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
+from django.test import Client
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
 from tracker.models import (
     Application,
     ApplicationEvent,
+    AppSettings,
     Document,
     Email,
     EventType,
     GmailAccount,
     Stage,
+    Tag,
     Task,
 )
 from tracker.services import create_snapshot, record_event, set_stage, store_document
@@ -111,6 +117,132 @@ def test_board_cards_show_application_date(client_logged):
     content = client_logged.get(reverse("tracker:application_board")).content.decode()
     assert "Applied 05 Jan" in content
     assert "No date" not in content
+
+
+def test_board_card_properties_save_and_persist(client_logged):
+    app = Application.objects.create(
+        company="Acme",
+        title="Engineer",
+        location="Cairo",
+        work_arrangement="remote",
+        employment_type="full_time",
+        salary_min=50000,
+        salary_currency="USD",
+        salary_period="year",
+        source="browser",
+        application_date=dt.date(2026, 1, 5),
+        closing_date=dt.date(2026, 2, 10),
+    )
+    app.tags.add(Tag.objects.create(name="Python", slug="python"))
+    board_url = reverse("tracker:application_board")
+    response = client_logged.get(board_url)
+    assert response.context["visible_fields"] == {"priority", "application_date"}
+    assert AppSettings.load().board_card_fields == ["priority", "application_date"]
+    options = BeautifulSoup(response.content, "html.parser").select(".board-customize-option input")
+    assert {option["value"] for option in options if option.has_attr("checked")} == {
+        "priority",
+        "application_date",
+    }
+
+    choices = [
+        "closing_date",
+        "tags",
+        "source",
+        "salary",
+        "employment_type",
+        "work_arrangement",
+        "location",
+    ]
+    response = client_logged.post(
+        reverse("tracker:board_card_fields_save"),
+        {"properties": choices, "next": f"{board_url}?q=Acme"},
+    )
+    assert response.status_code == 302
+    assert response.url == f"{board_url}?q=Acme"
+    assert AppSettings.load().board_card_fields == list(reversed(choices))
+
+    response = client_logged.get(response.url)
+    options = BeautifulSoup(response.content, "html.parser").select(".board-customize-option input")
+    assert {option["value"] for option in options if option.has_attr("checked")} == set(choices)
+    card = BeautifulSoup(response.content, "html.parser").select_one(".board-card-link")
+    text = card.get_text(" ", strip=True)
+    for value in ("Cairo", "Remote", "Full-time", "USD 50,000 per year", "Browser capture", "Python", "10 Feb 2026"):
+        assert value in text
+    assert "Applied" not in text
+    assert "Medium" not in text
+
+
+def test_board_card_properties_allow_none_and_keep_identity(client_logged):
+    Application.objects.create(company="Acme", title="Engineer", application_date=dt.date(2026, 1, 5))
+    response = client_logged.post(reverse("tracker:board_card_fields_save"), {})
+    assert response.status_code == 302
+    assert AppSettings.load().board_card_fields == []
+    card = BeautifulSoup(client_logged.get(response.url).content, "html.parser").select_one(
+        ".board-card"
+    )
+    text = card.select_one(".board-card-link").get_text(" ", strip=True)
+    assert "Acme" in text and "Engineer" in text
+    assert "Applied" not in text and "Medium" not in text
+    assert card.select_one(".board-card-move") is not None
+
+
+def test_board_card_properties_omit_unknown_values(client_logged):
+    Application.objects.create(company="Acme", title="Engineer")
+    client_logged.post(
+        reverse("tracker:board_card_fields_save"),
+        {"properties": ["application_date", "location", "work_arrangement", "employment_type", "salary", "tags", "closing_date"]},
+    )
+    card = BeautifulSoup(
+        client_logged.get(reverse("tracker:application_board")).content, "html.parser"
+    ).select_one(".board-card-link")
+    text = card.get_text(" ", strip=True)
+    assert "Applied No date" in text
+    for label in ("Location", "Arrangement", "Employment", "Salary", "Tags", "Closes"):
+        assert label not in text
+
+
+def test_board_card_properties_reject_invalid_input_and_external_return(client_logged):
+    url = reverse("tracker:board_card_fields_save")
+    assert client_logged.get(url).status_code == 405
+    response = client_logged.post(url, {"properties": ["location", "bogus"]})
+    assert response.status_code == 400
+    assert AppSettings.load().board_card_fields == ["priority", "application_date"]
+    response = client_logged.post(
+        url, {"properties": ["location", "location"], "next": "https://evil.example/"}
+    )
+    assert response.url == reverse("tracker:application_board")
+    assert AppSettings.load().board_card_fields == ["location"]
+    response = client_logged.post(
+        url, {"properties": ["tags"], "next": reverse("tracker:settings")}
+    )
+    assert response.url == reverse("tracker:application_board")
+
+
+def test_board_card_properties_require_login_and_csrf(client, user):
+    url = reverse("tracker:board_card_fields_save")
+    assert client.post(url, {"properties": ["location"]}).status_code == 302
+    csrf_client = Client(enforce_csrf_checks=True)
+    csrf_client.force_login(user)
+    assert csrf_client.post(url, {"properties": ["location"]}).status_code == 403
+    assert AppSettings.load().board_card_fields == ["priority", "application_date"]
+
+
+def test_board_card_tags_are_prefetched_only_when_selected(client_logged):
+    tag = Tag.objects.create(name="Python", slug="python")
+    for company in ("Acme", "Beta", "Gamma"):
+        app = Application.objects.create(company=company, title="Engineer")
+        app.tags.add(tag)
+    board_url = reverse("tracker:application_board")
+
+    with CaptureQueriesContext(connection) as queries:
+        client_logged.get(board_url)
+    assert not any('FROM "tracker_tag"' in query["sql"] for query in queries)
+
+    client_logged.post(reverse("tracker:board_card_fields_save"), {"properties": ["tags"]})
+    with CaptureQueriesContext(connection) as queries:
+        response = client_logged.get(board_url)
+    assert response.content.count(b"Python") == 3
+    assert sum('FROM "tracker_tag"' in query["sql"] for query in queries) == 1
 
 
 def test_stage_change_rejects_external_return_url(client_logged):

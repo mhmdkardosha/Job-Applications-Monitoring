@@ -9,6 +9,7 @@ import hmac
 import json
 import secrets
 from decimal import Decimal, InvalidOperation
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.conf import settings
@@ -17,6 +18,7 @@ from django.contrib.auth.decorators import login_not_required
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt
@@ -34,6 +36,7 @@ from .capture_service import (
 from .forms import (
     ApplicationFilterForm,
     ApplicationForm,
+    BoardCardFieldsForm,
     ContactForm,
     DocumentUploadForm,
     InterviewForm,
@@ -42,6 +45,7 @@ from .forms import (
 )
 from .integrations.ai_client import BudgetExceeded, UsageLedger
 from .models import (
+    BOARD_CARD_FIELD_CHOICES,
     CLOSED_STAGES,
     PIPELINE_STAGES,
     Application,
@@ -61,6 +65,7 @@ from .models import (
     Stage,
     Task,
     TaskStatus,
+    default_board_card_fields,
 )
 from .services import record_event, set_stage, store_document
 from .sync import SyncBusy, preview_backfill, retry_failed_emails, sync_account
@@ -199,9 +204,19 @@ def application_list(request):
 
 
 def application_board(request):
+    config = AppSettings.load()
+    allowed_fields = {key for key, _ in BOARD_CARD_FIELD_CHOICES}
+    stored_fields = config.board_card_fields
+    if not isinstance(stored_fields, list):
+        stored_fields = default_board_card_fields()
+    visible_fields = {
+        field for field in stored_fields if isinstance(field, str) and field in allowed_fields
+    }
     board_stages = [*PIPELINE_STAGES, *CLOSED_STAGES]
     groups = {stage: [] for stage in board_stages}
     form, qs = _filter_applications(request)
+    if "tags" in visible_fields:
+        qs = qs.prefetch_related("tags")
     for app in qs.filter(stage__in=board_stages):
         groups[app.stage].append(app)
     columns = [
@@ -211,8 +226,43 @@ def application_board(request):
     return render(
         request,
         "tracker/application_board.html",
-        {"columns": columns, "form": form, "stages": Stage.choices, "active_nav": "board"},
+        {
+            "columns": columns,
+            "form": form,
+            "stages": Stage.choices,
+            "active_nav": "board",
+            "visible_fields": visible_fields,
+            "card_fields_form": BoardCardFieldsForm(
+                initial={
+                    "properties": [key for key, _ in BOARD_CARD_FIELD_CHOICES if key in visible_fields]
+                }
+            ),
+        },
     )
+
+
+@require_POST
+def board_card_fields_save(request):
+    form = BoardCardFieldsForm(request.POST)
+    if not form.is_valid():
+        return HttpResponseBadRequest("Unknown board card property")
+    selected = set(form.cleaned_data["properties"])
+    config = AppSettings.load()
+    config.board_card_fields = [key for key, _ in BOARD_CARD_FIELD_CHOICES if key in selected]
+    config.save(update_fields=["board_card_fields", "updated_at"])
+    messages.success(request, "Board card properties saved.")
+    next_url = request.POST.get("next", "")
+    if (
+        next_url
+        and urlsplit(next_url).path == reverse("tracker:application_board")
+        and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        )
+    ):
+        return redirect(next_url)
+    return redirect("tracker:application_board")
 
 
 def _render_application_detail(request, pk: int, **extra_context):

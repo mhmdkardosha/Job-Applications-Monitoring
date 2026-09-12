@@ -174,6 +174,23 @@ class ReviewKind(models.TextChoices):
     CONFLICT = "conflict", "Conflicts with your correction"
 
 
+BOARD_CARD_FIELD_CHOICES = (
+    ("priority", "Priority"),
+    ("application_date", "Application date"),
+    ("location", "Location"),
+    ("work_arrangement", "Work arrangement"),
+    ("employment_type", "Employment type"),
+    ("salary", "Salary"),
+    ("source", "Source"),
+    ("tags", "Tags"),
+    ("closing_date", "Closing date"),
+)
+
+
+def default_board_card_fields() -> list[str]:
+    return ["priority", "application_date"]
+
+
 class TimeStampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -564,6 +581,7 @@ class AppSettings(models.Model):
     ai_model = models.CharField(max_length=60, default="deepseek-flash")
     ai_monthly_ceiling_usd = models.DecimalField(max_digits=8, decimal_places=2, default=10)
     capture_extension_token_hash = models.CharField(max_length=128, blank=True)
+    board_card_fields = models.JSONField(default=default_board_card_fields, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

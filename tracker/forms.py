@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from django import forms
 
 from .models import (
+    BOARD_CARD_FIELD_CHOICES,
     Application,
     Contact,
     Document,
@@ -46,6 +47,14 @@ class StyledFormMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._style()
+
+
+class BoardCardFieldsForm(forms.Form):
+    properties = forms.MultipleChoiceField(
+        choices=BOARD_CARD_FIELD_CHOICES,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
 
 
 class ApplicationForm(StyledFormMixin, forms.ModelForm):

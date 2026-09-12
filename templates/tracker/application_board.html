@@ -7,7 +7,23 @@
     <h1>Board</h1>
     <p class="sub">Drag cards between stages, or use Move to on any card. <a href="{% url 'tracker:application_list' %}">Switch to table</a></p>
   </div>
-  <a class="btn btn-primary" href="{% url 'tracker:application_create' %}">New application</a>
+  <div class="board-actions">
+    <details class="board-customize">
+      <summary class="btn btn-secondary">Customize cards</summary>
+      <form class="board-customize-panel" method="post" action="{% url 'tracker:board_card_fields_save' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <p class="small muted">Choose what appears on every Board card. Company and role always show.</p>
+        <div class="board-customize-options">
+          {% for checkbox in card_fields_form.properties %}
+          <label class="board-customize-option">{{ checkbox.tag }}<span>{{ checkbox.choice_label }}</span></label>
+          {% endfor %}
+        </div>
+        <button class="btn btn-primary btn-sm" type="submit">Save card layout</button>
+      </form>
+    </details>
+    <a class="btn btn-primary" href="{% url 'tracker:application_create' %}">New application</a>
+  </div>
 </div>
 
 <div class="board" role="list">
@@ -22,10 +38,23 @@
       <a class="board-card-link" href="{% url 'tracker:application_detail' app.pk %}">
         <div class="company">{{ app.company }}</div>
         <div class="role">{{ app.title }}</div>
-        <div class="meta">
-          <span class="prio prio-{{ app.priority }}">{{ app.get_priority_display }}</span>
-          <span class="small muted">Applied {{ app.application_date|date:"d M"|default:"No date" }}</span>
-        </div>
+        {% if "priority" in visible_fields or "application_date" in visible_fields %}
+          <div class="meta">
+            {% if "priority" in visible_fields %}<span class="prio prio-{{ app.priority }}">{{ app.get_priority_display }}</span>{% endif %}
+            {% if "application_date" in visible_fields %}<span class="small muted">Applied {{ app.application_date|date:"d M"|default:"No date" }}</span>{% endif %}
+          </div>
+        {% endif %}
+        {% if "location" in visible_fields and app.location %}<div class="board-card-detail"><span>Location</span><span>{{ app.location }}</span></div>{% endif %}
+        {% if "work_arrangement" in visible_fields and app.work_arrangement != "unknown" %}<div class="board-card-detail"><span>Arrangement</span><span>{{ app.get_work_arrangement_display }}</span></div>{% endif %}
+        {% if "employment_type" in visible_fields and app.employment_type != "unknown" %}<div class="board-card-detail"><span>Employment</span><span>{{ app.get_employment_type_display }}</span></div>{% endif %}
+        {% if "salary" in visible_fields and app.salary_display %}<div class="board-card-detail"><span>Salary</span><span>{{ app.salary_display }}</span></div>{% endif %}
+        {% if "source" in visible_fields %}<div class="board-card-detail"><span>Source</span><span>{{ app.get_source_display }}</span></div>{% endif %}
+        {% if "tags" in visible_fields %}
+          {% with card_tags=app.tags.all %}
+            {% if card_tags %}<div class="board-card-detail"><span>Tags</span><span>{% for tag in card_tags %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</span></div>{% endif %}
+          {% endwith %}
+        {% endif %}
+        {% if "closing_date" in visible_fields and app.closing_date %}<div class="board-card-detail"><span>Closes</span><span>{{ app.closing_date|date:"d M Y" }}</span></div>{% endif %}
       </a>
       <form class="board-card-move" method="post" action="{% url 'tracker:application_set_stage' app.pk %}">
         {% csrf_token %}
