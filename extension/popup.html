@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Save to Job Monitor</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <span class="mark"></span>
+    <strong>Job Monitor</strong>
+  </header>
+
+  <section id="setup" class="hidden">
+    <label class="label" for="token">Pairing token</label>
+    <input id="token" type="password" placeholder="Paste token from Settings" autocomplete="off">
+    <button id="save-token" class="btn">Save token</button>
+    <p class="hint">Generate a token in Job Monitor → Settings → Browser capture extension.</p>
+  </section>
+
+  <section id="capture" class="hidden">
+    <label class="label" for="title">Title</label>
+    <input id="title" type="text">
+    <label class="label" for="company">Company</label>
+    <input id="company" type="text">
+    <label class="label" for="url">URL</label>
+    <input id="url" type="text" readonly>
+    <p id="state" class="hint"></p>
+    <label class="check"><input id="create" type="checkbox" checked> Create application if none matches</label>
+    <button id="save" class="btn btn-primary">Save posting</button>
+    <p id="status" class="status"></p>
+  </section>
+
+  <section id="loading">
+    <p class="hint">Reading the current tab…</p>
+  </section>
+
+  <footer>
+    <button id="reset-token" class="link">Forget token</button>
+  </footer>
+  <script src="popup.js"></script>
+</body>
+</html>

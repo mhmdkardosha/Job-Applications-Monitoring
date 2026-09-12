@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Job Monitor Capture",
+  "version": "0.1.0",
+  "description": "Save the job posting in the current tab to your local Job Monitor.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "http://127.0.0.1:8765/*",
+    "http://localhost:8765/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Save job to Job Monitor"
+  }
+}

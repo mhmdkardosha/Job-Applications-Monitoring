@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Settings · Job Monitor{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>Settings</h1>
+    <p class="sub">Gmail connections, sync, AI configuration and reminder defaults.</p>
+  </div>
+</div>
+
+<div class="grid-2">
+  <section class="panel panel-tight">
+    <div class="panel-head"><h2>Gmail connections</h2></div>
+    <div class="panel-body">
+      {% if accounts %}
+      <ul class="task-list">
+        {% for account in accounts %}
+        <li class="list-item">
+          <div>
+            <div class="cell-title">{{ account.email }}</div>
+            <div class="small muted">
+              Last sync: {{ account.last_sync_at|date:"d M Y H:i"|default:"never" }}
+              {% if account.backfill_completed %}· backfilled{% endif %}
+            </div>
+            {% if account.last_error %}<div class="field-error small">{{ account.last_error|truncatechars:160 }}</div>{% endif %}
+          </div>
+          <span class="badge {% if account.connection_state == 'connected' %}badge-applied{% else %}badge-rejected{% endif %}">
+            {{ account.get_connection_state_display }}
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted">No account connected. Run <code class="mono">uv run python manage.py gmail_connect</code> to authorize read-only access.</p>
+      {% endif %}
+
+      {% if accounts %}
+      <form method="post" action="{% url 'tracker:gmail_sync_now' %}" class="stack" style="margin-top:14px" data-loading-label="Syncing…">
+        {% csrf_token %}
+        <div class="form-grid">
+          <label class="field">
+            <span class="field-label">Account</span>
+            <select name="account" class="form-select">
+              {% for account in accounts %}<option value="{{ account.email }}">{{ account.email }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">History window (days)</span>
+            <input class="form-input" type="number" name="days" min="1" value="{{ config.gmail_history_days }}">
+          </label>
+          <label class="field">
+            <span class="field-label">Max messages this run</span>
+            <input class="form-input" type="number" name="limit" min="1" value="50">
+          </label>
+          <label class="row small" style="gap:6px; align-self:end">
+            <input type="checkbox" name="backfill"> <span>Full backfill (re-scan window)</span>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Sync now</button>
+          <button class="btn btn-secondary" type="submit" formaction="{% url 'tracker:gmail_preview' %}">Preview scope</button>
+          <a class="btn btn-secondary" href="{% url 'tracker:review_inbox' %}">Go to review inbox{% if pending_reviews %} ({{ pending_reviews }}){% endif %}</a>
+        </div>
+        <p class="field-hint">Manual sync runs in this request and is capped per run. The scope includes inbox, archived, and sent mail; Gmail excludes Spam and Trash. Install the supplied sync timer for automatic five-minute checks.</p>
+      </form>
+      {% endif %}
+
+      {% if failed_emails %}
+      <form method="post" action="{% url 'tracker:retry_failed' %}" class="row" style="margin-top:12px; gap:8px" data-loading-label="Retrying…">
+        {% csrf_token %}
+        <span class="small muted">{{ failed_emails }} stored email(s) failed extraction.</span>
+        <button class="btn btn-secondary btn-sm" type="submit">Retry stored failures</button>
+      </form>
+      {% endif %}
+
+      <form method="post" action="{% url 'tracker:capture_email_links' %}" class="row" style="margin-top:12px; gap:8px" data-loading-label="Capturing…">
+        {% csrf_token %}
+        <span class="small muted">Archive public job links found in imported emails.</span>
+        <input type="hidden" name="limit" value="10">
+        <button class="btn btn-secondary btn-sm" type="submit">Capture email links</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="panel panel-tight">
+    <div class="panel-head"><h2>AI usage</h2></div>
+    <div class="panel-body">
+      <dl class="kv">
+        <dt>Model</dt><dd class="mono">{{ config.ai_model }}</dd>
+        <dt>Ceiling</dt><dd>${{ config.ai_monthly_ceiling_usd }} / month</dd>
+        <dt>Spent this month</dt><dd class="mono">${{ ai_spend|floatformat:4 }}</dd>
+        <dt>Remaining</dt><dd class="mono">${{ ai_remaining|floatformat:4 }}</dd>
+      </dl>
+      <p class="field-hint" style="margin-top:10px">Further requests stop once recorded spend reaches the ceiling. Cost is tracked per call in <span class="mono">data/ai_usage/</span>.</p>
+    </div>
+  </section>
+</div>
+
+<section class="panel panel-tight" style="margin-top:16px">
+  <div class="panel-head"><h2>Browser capture extension</h2></div>
+  <div class="panel-body">
+    {% if new_capture_token %}
+      <div class="flash flash-success">Copy this token now — it is shown only once:<br><code class="mono">{{ new_capture_token }}</code></div>
+    {% endif %}
+    <p class="small muted">Pair the Chrome extension with this app. The token is stored hashed and can be revoked at any time.</p>
+    <div class="row">
+      <form method="post" action="{% url 'tracker:generate_capture_token' %}" class="inline-form">
+        {% csrf_token %}
+        <button class="btn btn-secondary btn-sm" type="submit">{% if extension_token_set %}Generate new token{% else %}Generate token{% endif %}</button>
+      </form>
+      {% if extension_token_set %}
+      <form method="post" action="{% url 'tracker:revoke_capture_token' %}" class="inline-form">
+        {% csrf_token %}
+        <button class="btn btn-ghost btn-sm" type="submit">Revoke</button>
+      </form>
+      <span class="badge badge-applied">Paired</span>
+      {% else %}<span class="badge">Not paired</span>{% endif %}
+    </div>
+    <p class="field-hint" style="margin-top:10px">
+      Install: open <span class="mono">chrome://extensions</span>, enable Developer mode, choose
+      <em>Load unpacked</em>, and select the <span class="mono">extension/</span> folder. Then paste the token into the extension popup.
+    </p>
+  </div>
+</section>
+
+<section class="panel" style="margin-top:16px">
+  <div class="panel-head"><h2>Preferences</h2></div>
+  <div class="panel-body">
+    <form method="post" action="{% url 'tracker:settings_save' %}">
+      {% csrf_token %}
+      <div class="form-grid">
+        <label class="field">
+          <span class="field-label">Import history window (days)</span>
+          <input class="form-input" type="number" name="gmail_history_days" min="1" value="{{ config.gmail_history_days }}">
+        </label>
+        <label class="field">
+          <span class="field-label">Default follow-up reminder (days)</span>
+          <input class="form-input" type="number" name="follow_up_days" min="1" value="{{ config.follow_up_days }}">
+        </label>
+        <label class="field">
+          <span class="field-label">Display timezone</span>
+          <input class="form-input" type="text" name="display_timezone" value="{{ config.display_timezone }}">
+        </label>
+        <label class="field">
+          <span class="field-label">AI model</span>
+          <input class="form-input" type="text" name="ai_model" value="{{ config.ai_model }}">
+        </label>
+        <label class="field">
+          <span class="field-label">Monthly AI ceiling (USD)</span>
+          <input class="form-input" type="number" min="0" step="0.01" name="ai_monthly_ceiling_usd" value="{{ config.ai_monthly_ceiling_usd }}">
+        </label>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Save settings</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="panel panel-tight" style="margin-top:16px">
+  <div class="panel-head"><h2>Data and backups</h2></div>
+  <div class="panel-body">
+    <p class="small muted">A full backup contains the database and uploaded documents. CSV is a summary for spreadsheets, not a restorable backup.</p>
+    <div class="row">
+      <form method="post" action="{% url 'tracker:backup_now' %}" class="inline-form" data-loading-label="Backing up…">
+        {% csrf_token %}
+        <button class="btn btn-primary btn-sm" type="submit">Back up now</button>
+      </form>
+      <a class="btn btn-secondary btn-sm" href="{% url 'tracker:export_csv' %}">Download CSV</a>
+      <a class="btn btn-ghost btn-sm" href="{% url 'tracker:export_csv' %}?include_archived=1">CSV with archived</a>
+    </div>
+    <p class="field-hint" style="margin-top:10px">Daily backup and restore instructions are in the project guide. Gmail and AI credentials are intentionally excluded.</p>
+  </div>
+</section>
+{% endblock %}

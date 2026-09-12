@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Documents · Job Monitor{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>Documents</h1>
+    <p class="sub">Versioned resumes and cover letters. Files are copied into managed local storage and deduplicated by hash.</p>
+  </div>
+</div>
+
+<section class="panel panel-tight">
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Document</th><th>Kind</th><th>Size</th><th>Uploaded</th><th>Linked to</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for document in documents %}
+        <tr>
+          <td class="cell-title">{{ document.label|default:document.original_filename }}</td>
+          <td>{{ document.get_kind_display }}</td>
+          <td class="num">{{ document.size|filesizeformat }}</td>
+          <td class="nowrap">{{ document.created_at|date:"d M Y" }}</td>
+          <td>
+            {% for app in document.applications.all %}
+              <a href="{% url 'tracker:application_detail' app.pk %}">{{ app.company }}</a>{% if not forloop.last %}, {% endif %}
+            {% empty %}<span class="muted small">—</span>{% endfor %}
+          </td>
+          <td class="nowrap"><a class="btn btn-ghost btn-sm" href="{{ document.file.url }}" download>Download</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">
+          <div class="empty"><h3>No documents yet</h3><p>Upload a resume or cover letter from an application's detail page.</p></div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,16 @@
+{
+  "id": "m-reject-001",
+  "thread_id": "t-reject-001",
+  "account": "me@example.com",
+  "headers": {
+    "From": "Acme Talent <talent@acmecorp.com>",
+    "To": "me@example.com",
+    "Subject": "Update on your application",
+    "Date": "Fri, 12 Sep 2026 10:00:00 +0000",
+    "Message-ID": "<reject-001@acmecorp.com>"
+  },
+  "snippet": "After careful consideration we will not be moving forward.",
+  "body_text": "Hi, thank you for your interest in Acme Corp. After careful consideration, we have decided not to move forward with your application for Senior Backend Engineer at this time. We appreciate your time.",
+  "label_ids": ["INBOX"],
+  "internal_date": "1757671200000"
+}

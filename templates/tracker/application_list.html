@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Applications · Job Monitor{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>Applications</h1>
+    <p class="sub">Search and filter every opportunity. <a href="{% url 'tracker:application_board' %}">Switch to board</a></p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'tracker:application_create' %}">New application</a>
+</div>
+
+<form class="toolbar"
+      method="get"
+      action="{% url 'tracker:application_list' %}"
+      hx-get="{% url 'tracker:application_list' %}"
+      hx-target="#application-rows"
+      hx-swap="innerHTML"
+      hx-trigger="change, keyup delay:300ms"
+      hx-push-url="true">
+  <label class="field" style="min-width:220px">
+    <span class="field-label">Search</span>
+    <input class="form-input" type="search" name="q" value="{{ form.q.value|default:'' }}" placeholder="Company, role, req ID…">
+  </label>
+  <label class="field">
+    <span class="field-label">Stage</span>
+    {{ form.stage }}
+  </label>
+  <label class="field">
+    <span class="field-label">Priority</span>
+    {{ form.priority }}
+  </label>
+  <label class="field">
+    <span class="field-label">Source</span>
+    {{ form.source }}
+  </label>
+  <label class="field">
+    <span class="field-label">Sort</span>
+    {{ form.sort }}
+  </label>
+  <label class="row small" style="gap:6px">
+    {{ form.show_archived }} <span>Show archived</span>
+  </label>
+  <details class="toolbar-more">
+    <summary>More filters</summary>
+    <div class="toolbar" style="margin-top:10px; margin-bottom:0">
+      {% for field in form %}
+        {% if field.name != 'q' and field.name != 'stage' and field.name != 'priority' and field.name != 'source' and field.name != 'sort' and field.name != 'show_archived' %}
+        <label class="field">
+          <span class="field-label">{{ field.label }}</span>
+          {{ field }}
+          {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+        </label>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </details>
+</form>
+
+<section class="panel panel-tight">
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Company</th>
+          <th>Role</th>
+          <th>Stage</th>
+          <th>Priority</th>
+          <th>Location</th>
+          <th>Applied</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody id="application-rows">
+        {% include "tracker/partials/application_rows.html" %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

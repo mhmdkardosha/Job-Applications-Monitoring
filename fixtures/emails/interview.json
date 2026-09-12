@@ -1,0 +1,16 @@
+{
+  "id": "m-interview-001",
+  "thread_id": "t-interview-001",
+  "account": "me@example.com",
+  "headers": {
+    "From": "Jordan Lee <jordan.lee@acmecorp.com>",
+    "To": "me@example.com",
+    "Subject": "Interview invitation: Senior Backend Engineer at Acme",
+    "Date": "Tue, 08 Sep 2026 14:05:00 +0000",
+    "Message-ID": "<interview-001@acmecorp.com>"
+  },
+  "snippet": "Would Tuesday 15 September at 3:00 PM EET work for a 45-minute interview?",
+  "body_text": "Hi, I'm Jordan, the hiring manager for Senior Backend Engineer (Req 12345). We'd love to schedule a 45-minute technical interview. Would Tuesday 15 September 2026 at 3:00 PM Africa/Cairo time work? The call will be on Google Meet. Reply to confirm.",
+  "label_ids": ["INBOX"],
+  "internal_date": "1757340300000"
+}

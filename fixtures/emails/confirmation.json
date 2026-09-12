@@ -1,0 +1,16 @@
+{
+  "id": "m-confirm-001",
+  "thread_id": "t-confirm-001",
+  "account": "me@example.com",
+  "headers": {
+    "From": "Acme Careers <no-reply@greenhouse.io>",
+    "To": "me@example.com",
+    "Subject": "Thanks for applying to Acme Corp",
+    "Date": "Mon, 01 Sep 2026 09:12:00 +0000",
+    "Message-ID": "<confirm-001@greenhouse.io>"
+  },
+  "snippet": "We received your application for Senior Backend Engineer (Req 12345).",
+  "body_text": "Hi, thanks for applying to Acme Corp. We received your application for Senior Backend Engineer, requisition 12345. Our team will review it and be in touch. This is an automated confirmation; please do not reply.",
+  "label_ids": ["INBOX"],
+  "internal_date": "1756717920000"
+}

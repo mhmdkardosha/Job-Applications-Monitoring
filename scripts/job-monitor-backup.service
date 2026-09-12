@@ -1,0 +1,8 @@
+# Daily backup (oneshot). Install with job-monitor-backup.timer.
+[Unit]
+Description=Job Application Monitor backup
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/vs-code-projects/job_application_monitoring
+ExecStart=%h/.local/bin/uv run python manage.py backup --keep 7

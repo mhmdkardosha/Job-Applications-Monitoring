@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Follow-up draft · Job Monitor{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>Follow-up draft</h1>
+    <p class="sub">For {{ application.company }} — {{ application.title }}. Copy and edit before sending; the tracker does not send email.</p>
+  </div>
+  <a class="btn btn-secondary" href="{% url 'tracker:application_detail' application.pk %}">Back to application</a>
+</div>
+
+<section class="panel">
+  <textarea id="draft" class="form-textarea" rows="16">{{ draft }}</textarea>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="button" id="copy-draft">Copy to clipboard</button>
+    <span id="copy-status" class="small muted"></span>
+  </div>
+</section>
+<script>
+  document.getElementById("copy-draft").addEventListener("click", async () => {
+    const text = document.getElementById("draft").value;
+    try {
+      await navigator.clipboard.writeText(text);
+      document.getElementById("copy-status").textContent = "Copied.";
+    } catch (e) {
+      const el = document.getElementById("draft");
+      el.select();
+      document.execCommand("copy");
+      document.getElementById("copy-status").textContent = "Copied.";
+    }
+  });
+</script>
+{% endblock %}

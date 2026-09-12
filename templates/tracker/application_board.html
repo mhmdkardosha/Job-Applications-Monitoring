@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Board · Job Monitor{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>Board</h1>
+    <p class="sub">Drag cards between stages, or use Move to on any card. <a href="{% url 'tracker:application_list' %}">Switch to table</a></p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'tracker:application_create' %}">New application</a>
+</div>
+
+<div class="board" role="list">
+  {% for column in columns %}
+  <section class="board-col" role="listitem" aria-label="{{ column.label }}" data-stage="{{ column.stage }}">
+    <div class="board-col-head">
+      <span>{{ column.label }}</span>
+      <span class="count">{{ column.applications|length }}</span>
+    </div>
+    {% for app in column.applications %}
+    <article class="board-card" draggable="true">
+      <a class="board-card-link" href="{% url 'tracker:application_detail' app.pk %}">
+        <div class="company">{{ app.company }}</div>
+        <div class="role">{{ app.title }}</div>
+        <div class="meta">
+          <span class="prio prio-{{ app.priority }}">{{ app.get_priority_display }}</span>
+          <span class="small muted">Applied {{ app.application_date|date:"d M"|default:"No date" }}</span>
+        </div>
+      </a>
+      <form class="board-card-move" method="post" action="{% url 'tracker:application_set_stage' app.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <label for="move-{{ app.pk }}">Move to</label>
+        <select class="form-select" id="move-{{ app.pk }}" name="stage" aria-label="Move {{ app.company }} {{ app.title }} to stage">
+          {% for value, label in stages %}
+          <option value="{{ value }}" {% if app.stage == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-secondary btn-sm" type="submit">Move</button>
+      </form>
+    </article>
+    {% empty %}
+    <p class="small muted" style="padding:2px 6px 6px;">Empty</p>
+    {% endfor %}
+  </section>
+  {% endfor %}
+</div>
+<script src="{% static 'js/board.js' %}?v=20260912-scroll" defer></script>
+{% endblock %}

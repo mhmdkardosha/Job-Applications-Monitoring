@@ -1,0 +1,16 @@
+{
+  "id": "m-second-role-001",
+  "thread_id": "t-second-role-001",
+  "account": "me@example.com",
+  "headers": {
+    "From": "Acme Careers <no-reply@greenhouse.io>",
+    "To": "me@example.com",
+    "Subject": "Thanks for applying to Acme Corp",
+    "Date": "Wed, 02 Sep 2026 11:30:00 +0000",
+    "Message-ID": "<second-role-001@greenhouse.io>"
+  },
+  "snippet": "We received your application for Staff Platform Engineer (Req 99887).",
+  "body_text": "Hi, thanks for applying to Acme Corp. We received your application for Staff Platform Engineer, requisition 99887. We will be in touch.",
+  "label_ids": ["INBOX"],
+  "internal_date": "1756812600000"
+}

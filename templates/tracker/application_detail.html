@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}{{ application.company }} · {{ application.title }}{% endblock %}
+{% block content %}
+<div class="detail-hero">
+  <div class="row" style="align-items:flex-start; gap:14px">
+    <span class="avatar" aria-hidden="true">{{ application.company|slice:":1" }}</span>
+    <div>
+      <h1>{{ application.title }}</h1>
+      <p class="detail-meta">
+        {{ application.company }}
+        {% if application.location %} · {{ application.location }}{% endif %}
+        {% if application.get_work_arrangement_display != "Unknown" %} · {{ application.get_work_arrangement_display }}{% endif %}
+        {% if application.requisition_id %} · <span class="mono">Req {{ application.requisition_id }}</span>{% endif %}
+      </p>
+    </div>
+  </div>
+  <div class="detail-actions">
+    {% include "tracker/partials/stage_control.html" with application=application stages=stages %}
+    <a class="btn btn-ghost btn-sm" href="{% url 'tracker:follow_up_draft' application.pk %}">Follow-up draft</a>
+    <a class="btn btn-secondary btn-sm" href="{% url 'tracker:application_update' application.pk %}">Edit</a>
+    <form method="post" action="{% url 'tracker:application_archive' application.pk %}" class="inline-form">
+      {% csrf_token %}
+      <button class="btn btn-ghost btn-sm" type="submit">{% if application.is_archived %}Restore{% else %}Archive{% endif %}</button>
+    </form>
+  </div>
+</div>
+
+<div class="detail-layout">
+  <div class="detail-main">
+    <section class="panel panel-tight">
+      <div class="panel-head">
+        <h2>Posting &amp; requirements</h2>
+        <div class="row" style="gap:10px">
+          {% if latest_snapshot %}
+            <a class="small" href="{% url 'tracker:snapshot_print' latest_snapshot.pk %}" target="_blank" rel="noreferrer">Print view</a>
+            <span class="badge badge-{{ latest_snapshot.capture_state }}">
+              {{ latest_snapshot.get_capture_state_display }} · v{{ latest_snapshot.version }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="panel-body">
+        <form method="post" action="{% url 'tracker:capture_from_url' application.pk %}" class="row" style="gap:8px; margin-bottom:12px" data-loading-label="Capturing…">
+          {% csrf_token %}
+          <input class="form-input" type="url" name="url" placeholder="Paste a public job posting URL to archive" style="flex:1" value="{{ application.job_url }}">
+          <button class="btn btn-secondary btn-sm" type="submit">Capture posting</button>
+        </form>
+        <details class="disclosure" style="margin-bottom:12px">
+          <summary>Paste a description instead</summary>
+          <form method="post" action="{% url 'tracker:capture_from_text' application.pk %}" class="stack" style="margin-top:10px" data-loading-label="Saving…">
+            {% csrf_token %}
+            <label class="field">
+              <span class="field-label">Job description</span>
+              <textarea class="form-textarea" name="description" rows="10" required></textarea>
+            </label>
+            <button class="btn btn-secondary btn-sm" type="submit">Save description</button>
+          </form>
+        </details>
+        {% if latest_snapshot %}
+          {% if latest_snapshot.url %}<p class="small"><a href="{{ latest_snapshot.url }}" rel="noreferrer noopener" target="_blank">{{ latest_snapshot.resolved_url|default:latest_snapshot.url }}</a></p>{% endif %}
+          {% if latest_snapshot.description %}
+            <details class="disclosure">
+              <summary>Saved job description ({{ latest_snapshot.description|length|intcomma }} chars)</summary>
+              <div class="snapshot-body">{{ latest_snapshot.description }}</div>
+            </details>
+          {% else %}
+            <p class="muted">No description text was captured for this snapshot.</p>
+          {% endif %}
+          {% with req=latest_snapshot.requirements %}
+          <div class="grid-2" style="margin-top:14px">
+            <div>
+              <h3>Responsibilities</h3>
+              {% if req.responsibilities %}<ul>{% for item in req.responsibilities %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted small">Unknown</p>{% endif %}
+            </div>
+            <div>
+              <h3>Required skills</h3>
+              {% if req.required_skills %}<ul>{% for item in req.required_skills %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted small">Unknown</p>{% endif %}
+            </div>
+          </div>
+          {% endwith %}
+          {% if latest_snapshot.unknown_fields %}
+            <p class="small muted" style="margin-top:10px">Unknown at capture: {{ latest_snapshot.unknown_fields|join:", " }}</p>
+          {% endif %}
+          {% if snapshots|length > 1 %}
+            <details class="disclosure small" style="margin-top:10px">
+              <summary>{{ snapshots|length }} saved versions</summary>
+              <ul>
+                {% for snap in snapshots %}
+                <li>v{{ snap.version }} · {{ snap.captured_at|date:"d M Y H:i" }} · {{ snap.get_capture_state_display }}</li>
+                {% endfor %}
+              </ul>
+            </details>
+          {% endif %}
+        {% else %}
+          <div class="small muted">
+            No posting saved yet. Use the browser extension, or paste a public posting URL above.
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Activity</h2></div>
+      <div class="panel-body">
+        {% if events %}
+        <ul class="timeline">
+          {% for event in events %}
+          <li class="{% if forloop.first %}is-latest{% endif %}">
+            <div class="what">{{ event.get_event_type_display }}</div>
+            {% if event.summary %}<div class="small">{{ event.summary }}</div>{% endif %}
+            <div class="when">
+              {{ event.occurred_at|date:"d M Y H:i" }}
+              · {{ event.get_source_display }}{% if event.actor == 'user' %} · corrected by you{% endif %}
+              {% if event.confidence %}· confidence {{ event.confidence|floatformat:2 }}{% endif %}
+            </div>
+            {% if event.email %}
+            <div class="small muted">from email:
+              {% if event.email.gmail_url %}<a href="{{ event.email.gmail_url }}" target="_blank" rel="noopener noreferrer" title="Open Gmail thread">{{ event.email.subject|default:"(no subject)" }}</a>
+              {% else %}{{ event.email.subject|default:"(no subject)" }}{% endif %}
+            </div>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="muted">No history yet.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Linked emails</h2></div>
+      <div class="panel-body">
+        {% if emails %}
+          <ul class="task-list">
+            {% for email in emails %}
+            <li class="list-item linked-email">
+              <div>
+                <div class="cell-title">
+                  {% if email.gmail_url %}<a href="{{ email.gmail_url }}" target="_blank" rel="noopener noreferrer" title="Open Gmail thread">{{ email.subject|default:"(no subject)" }}</a>
+                  {% else %}{{ email.subject|default:"(no subject)" }}{% endif %}
+                </div>
+                <div class="small muted">{{ email.from_address }} · {{ email.received_at|date:"d M Y" }}{% if email.gmail_url %} · Opens in Gmail{% endif %}</div>
+                <details class="disclosure small" style="margin-top:8px" {% if forloop.first %}open{% endif %}>
+                  <summary>Message body</summary>
+                  <div class="snapshot-body">{{ email.display_body|default:"No stored message body." }}</div>
+                </details>
+              </div>
+              <span class="badge">{{ email.get_process_state_display }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+        <p class="muted">No imported emails are linked to this application.</p>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+
+  <aside class="detail-side">
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Overview</h2></div>
+      <div class="panel-body">
+        <dl class="kv">
+          <dt>Stage</dt><dd><span class="badge badge-{{ application.stage }}">{{ application.get_stage_display }}</span></dd>
+          <dt>Priority</dt><dd><span class="prio prio-{{ application.priority }}">{{ application.get_priority_display }}</span></dd>
+          <dt>Source</dt><dd>{{ application.get_source_display }}</dd>
+          <dt>Employment</dt><dd>{{ application.get_employment_type_display }}</dd>
+          <dt>Salary</dt><dd>{{ application.salary_display|default:"Unknown" }}</dd>
+          <dt>Applied</dt><dd>{{ application.application_date|date:"d M Y"|default:"Unknown" }}</dd>
+          <dt>Closing</dt><dd>{{ application.closing_date|date:"d M Y"|default:"Unknown" }}</dd>
+          <dt>Job URL</dt><dd>{% if application.job_url %}<a href="{{ application.job_url }}" target="_blank" rel="noreferrer noopener">Open</a>{% else %}Unknown{% endif %}</dd>
+          <dt>Tags</dt>
+          <dd>{% if application.tags.all %}<span class="chip-set">{% for tag in application.tags.all %}<span class="chip">{{ tag.name }}</span>{% endfor %}</span>{% else %}—{% endif %}</dd>
+        </dl>
+        {% if application.notes %}<h3 style="margin-top:14px">Notes</h3><p class="small">{{ application.notes|linebreaksbr }}</p>{% endif %}
+      </div>
+    </section>
+
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Tasks</h2></div>
+      <div class="panel-body">
+        <ul class="task-list">
+          {% for task in tasks %}{% include "tracker/partials/task_row.html" %}{% empty %}
+          <li class="muted small">No tasks.</li>{% endfor %}
+        </ul>
+        <details class="disclosure" style="margin-top:10px" {% if open_form == 'task' %}open{% endif %}>
+          <summary>Add task</summary>
+          <form method="post" action="{% url 'tracker:task_create' application.pk %}" class="stack" style="margin-top:10px">
+            {% csrf_token %}
+            {% include "tracker/partials/form_fields.html" with form=task_form only %}
+            <button class="btn btn-secondary btn-sm" type="submit">Add task</button>
+          </form>
+        </details>
+      </div>
+    </section>
+
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Interviews</h2></div>
+      <div class="panel-body">
+        <ul class="task-list">
+          {% for interview in interviews %}
+          <li class="list-item">
+            <div>
+              <div class="cell-title">Round {{ interview.round }} · {{ interview.get_kind_display }}</div>
+              <div class="small muted">{{ interview.scheduled_start|date:"d M Y H:i"|default:"Time not set" }} · {{ interview.get_outcome_display }}</div>
+            </div>
+            <div class="row" style="gap:6px">
+              {% if interview.scheduled_start %}<a class="btn btn-ghost btn-sm" href="{% url 'tracker:interview_ics' interview.pk %}">.ics</a>{% endif %}
+              <a class="btn btn-ghost btn-sm" href="{% url 'tracker:interview_update' interview.pk %}">Edit</a>
+            </div>
+          </li>
+          {% empty %}<li class="muted small">No interviews.</li>{% endfor %}
+        </ul>
+        <details class="disclosure" style="margin-top:10px" {% if open_form == 'interview' %}open{% endif %}>
+          <summary>Add interview</summary>
+          <form method="post" action="{% url 'tracker:interview_create' application.pk %}" class="stack" style="margin-top:10px">
+            {% csrf_token %}
+            {% include "tracker/partials/form_fields.html" with form=interview_form only %}
+            <button class="btn btn-secondary btn-sm" type="submit">Add interview</button>
+          </form>
+        </details>
+      </div>
+    </section>
+
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Contacts</h2></div>
+      <div class="panel-body">
+        <ul class="task-list">
+          {% for contact in contacts %}
+          <li class="list-item">
+            <div>
+              <div class="cell-title">{{ contact.name }}</div>
+              <div class="small muted">{{ contact.role }}{% if contact.company %} · {{ contact.company }}{% endif %}{% if contact.email %} · {{ contact.email }}{% endif %}</div>
+            </div>
+          </li>
+          {% empty %}<li class="muted small">No contacts.</li>{% endfor %}
+        </ul>
+        <details class="disclosure" style="margin-top:10px" {% if open_form == 'contact' %}open{% endif %}>
+          <summary>Add contact</summary>
+          <form method="post" action="{% url 'tracker:contact_create' application.pk %}" class="stack" style="margin-top:10px">
+            {% csrf_token %}
+            {% include "tracker/partials/form_fields.html" with form=contact_form only %}
+            <button class="btn btn-secondary btn-sm" type="submit">Add contact</button>
+          </form>
+        </details>
+      </div>
+    </section>
+
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Documents</h2></div>
+      <div class="panel-body">
+        <ul class="doc-list">
+          {% for document in documents %}
+          <li class="list-item">
+            <div>
+              <div class="cell-title">{{ document.label|default:document.original_filename }}</div>
+              <div class="small muted">{{ document.get_kind_display }} · {{ document.size|filesizeformat }} · {{ document.created_at|date:"d M Y" }}</div>
+            </div>
+            <div class="row" style="gap:6px">
+              <a class="btn btn-ghost btn-sm" href="{{ document.file.url }}" download>Download</a>
+              <form method="post" action="{% url 'tracker:document_unlink' application.pk document.pk %}" class="inline-form">
+                {% csrf_token %}
+                <button class="btn btn-ghost btn-sm" type="submit">Unlink</button>
+              </form>
+            </div>
+          </li>
+          {% empty %}<li class="muted small">No documents.</li>{% endfor %}
+        </ul>
+        <details class="disclosure" style="margin-top:10px" {% if open_form == 'document' %}open{% endif %}>
+          <summary>Upload document</summary>
+          <form method="post" action="{% url 'tracker:document_upload' application.pk %}" enctype="multipart/form-data" class="stack" style="margin-top:10px">
+            {% csrf_token %}
+            {% include "tracker/partials/form_fields.html" with form=document_form only %}
+            <button class="btn btn-secondary btn-sm" type="submit">Upload</button>
+          </form>
+        </details>
+        <form method="post" action="{% url 'tracker:document_link' application.pk %}" class="row" style="margin-top:10px; gap:6px">
+          {% csrf_token %}
+          <select name="document" class="form-select" style="flex:1" required>
+            <option value="">Link existing document…</option>
+            {% for doc in all_documents %}<option value="{{ doc.pk }}">{{ doc.label|default:doc.original_filename }}</option>{% endfor %}
+          </select>
+          <button class="btn btn-secondary btn-sm" type="submit">Link</button>
+        </form>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

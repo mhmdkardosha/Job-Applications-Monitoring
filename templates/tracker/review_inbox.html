@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Review inbox · Job Monitor{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>Review inbox</h1>
+    <p class="sub">Uncertain imports and suggested matches. Nothing here has been applied yet.</p>
+  </div>
+</div>
+
+{% if items %}
+<form id="bulk-form" method="post" action="{% url 'tracker:review_bulk' %}" class="panel" style="margin-bottom:16px">
+  {% csrf_token %}
+  <div class="row">
+    <strong class="small">Bulk actions</strong>
+    <button class="btn btn-secondary btn-sm" type="submit" name="bulk_action" value="bulk_accept">Accept selected matches</button>
+    <button class="btn btn-ghost btn-sm" type="submit" name="bulk_action" value="bulk_ignore">Mark selected not job-related</button>
+    <span class="small muted" style="margin-left:auto">Link selected to:</span>
+    <select name="application" class="form-select" style="min-width:200px">
+      <option value="">Choose application…</option>
+      {% for app in applications %}<option value="{{ app.pk }}">{{ app }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-secondary btn-sm" type="submit" name="bulk_action" value="bulk_link">Link</button>
+  </div>
+</form>
+
+<div class="stack">
+  {% for item in items %}
+  <section class="panel">
+    <div class="spread" style="align-items:flex-start">
+      <div class="row" style="align-items:flex-start">
+        <input type="checkbox" name="item_ids" value="{{ item.pk }}" form="bulk-form"
+               aria-label="Select {{ item.email.subject|default:'item' }}">
+        <div>
+          <div class="cell-title">
+            {% if item.email.gmail_url %}<a href="{{ item.email.gmail_url }}" target="_blank" rel="noopener noreferrer" title="Open Gmail thread">{{ item.email.subject|default:"(no subject)" }}</a>
+            {% else %}{{ item.email.subject|default:"(no subject)" }}{% endif %}
+          </div>
+          <div class="small muted">
+            {{ item.email.from_address }} · {{ item.email.received_at|date:"d M Y H:i" }} · {{ item.email.account.email }}
+          </div>
+        </div>
+      </div>
+      <span class="badge {% if item.kind == 'ambiguous' %}badge-screening{% elif item.kind == 'conflict' %}badge-rejected{% else %}badge-interviewing{% endif %}">
+        {{ item.get_kind_display }}
+      </span>
+    </div>
+
+    <div class="grid-2" style="margin-top:14px">
+      <dl class="kv">
+        <dt>Event</dt><dd>{{ item.suggestion.event_type|default:"unknown" }}</dd>
+        <dt>Company</dt><dd>{{ item.suggestion.company|default:"—" }}</dd>
+        <dt>Role</dt><dd>{{ item.suggestion.role|default:"—" }}</dd>
+        <dt>Requisition</dt><dd>{{ item.suggestion.requisition_id|default:"—" }}</dd>
+        <dt>Interview</dt><dd>{{ item.suggestion.interview_start|default:"—" }}</dd>
+        <dt>Confidence</dt><dd>{{ item.suggestion.confidence|floatformat:2 }}</dd>
+        <dt>Why flagged</dt><dd>{{ item.note }}</dd>
+      </dl>
+      <div>
+        <h3>Evidence</h3>
+        {% if item.suggestion.evidence %}
+          <ul class="small">
+            {% for ev in item.suggestion.evidence %}
+            <li><span class="mono">{{ ev.field }}</span>: “{{ ev.excerpt }}”</li>
+            {% endfor %}
+          </ul>
+        {% else %}<p class="muted small">No excerpts.</p>{% endif %}
+        <details class="disclosure small">
+          <summary>Message body</summary>
+          <div class="snapshot-body">{{ item.email.display_body|default:"No stored message body." }}</div>
+        </details>
+      </div>
+    </div>
+
+    {% if item.candidates %}
+    <div class="chip-set" style="margin-top:10px">
+      {% for candidate in item.candidates %}
+      <span class="chip">
+        {% if candidate.strong %}★{% endif %} {{ candidate.label }} · {{ candidate.reason }}
+      </span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row" style="margin-top:14px">
+      {% if item.can_accept %}
+      <form method="post" action="{% url 'tracker:review_action' item.pk %}" class="inline-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="accept">
+        <button class="btn btn-primary btn-sm" type="submit">Accept suggested match</button>
+      </form>
+      {% endif %}
+      {% if item.suggestion.company and item.suggestion.role %}
+      <form method="post" action="{% url 'tracker:review_action' item.pk %}" class="inline-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create">
+        <button class="btn btn-secondary btn-sm" type="submit">Create application</button>
+      </form>
+      {% endif %}
+      <form method="post" action="{% url 'tracker:review_action' item.pk %}" class="row" style="gap:8px">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="link">
+        <select name="application" class="form-select" style="min-width:220px" required>
+          <option value="">Link to application…</option>
+          {% for app in applications %}
+          <option value="{{ app.pk }}">{{ app }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-secondary btn-sm" type="submit">Link</button>
+      </form>
+      <form method="post" action="{% url 'tracker:review_action' item.pk %}" class="inline-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="ignore">
+        <button class="btn btn-ghost btn-sm" type="submit">Not job-related</button>
+      </form>
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<section class="panel">
+  <div class="empty">
+    <h3>Inbox zero</h3>
+    <p>No uncertain imports waiting. Run a Gmail sync from Settings to bring in mail.</p>
+    <a class="btn btn-secondary btn-sm" href="{% url 'tracker:settings' %}">Open settings</a>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

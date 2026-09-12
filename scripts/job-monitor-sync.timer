@@ -1,0 +1,11 @@
+# Check Gmail every five minutes while the computer is running.
+[Unit]
+Description=Run the Job Monitor Gmail sync every five minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

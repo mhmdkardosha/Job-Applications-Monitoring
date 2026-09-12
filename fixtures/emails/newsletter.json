@@ -1,0 +1,17 @@
+{
+  "id": "m-newsletter-001",
+  "thread_id": "t-newsletter-001",
+  "account": "me@example.com",
+  "headers": {
+    "From": "Hiring Weekly <news@hiringweekly.com>",
+    "To": "me@example.com",
+    "Subject": "This week in tech hiring: 10 hot roles",
+    "Date": "Mon, 07 Sep 2026 06:00:00 +0000",
+    "Message-ID": "<newsletter-001@hiringweekly.com>",
+    "List-Unsubscribe": "<https://hiringweekly.com/unsubscribe?u=1>"
+  },
+  "snippet": "Here are this week's trending engineering jobs.",
+  "body_text": "Here are this week's trending engineering jobs across the industry. Click through to read more about market trends and salary data.",
+  "label_ids": ["INBOX"],
+  "internal_date": "1757055600000"
+}

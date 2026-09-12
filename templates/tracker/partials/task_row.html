@@ -1,0 +1,39 @@
+{% load humanize %}
+<li class="list-item" id="task-{{ task.pk }}">
+  <form method="post"
+        action="{% url 'tracker:task_toggle' task.pk %}"
+        hx-post="{% url 'tracker:task_toggle' task.pk %}"
+        hx-target="#task-{{ task.pk }}"
+        hx-swap="outerHTML">
+    {% csrf_token %}
+    <button type="submit" class="icon-btn" title="Toggle done" aria-label="Toggle task done">
+      {% if task.status == 'done' %}✓{% else %}○{% endif %}
+    </button>
+  </form>
+  <div style="flex:1">
+    <div class="cell-title {% if task.status == 'done' %}muted{% endif %}"
+         {% if task.status == 'done' %}style="text-decoration:line-through"{% endif %}>
+      {{ task.title }}
+    </div>
+    <div class="small muted">
+      {% if task.application %}<a href="{% url 'tracker:application_detail' task.application.pk %}">{{ task.application.company }}</a> · {% endif %}
+      {% if task.due_at %}due {{ task.due_at|date:"d M Y H:i" }}{% else %}no due date{% endif %}
+      {% if task.status == 'done' %} · completed {{ task.completed_at|date:"d M Y" }}{% endif %}
+    </div>
+  </div>
+  {% if task.status != 'done' %}
+  <div class="row" style="gap:4px">
+    <form method="post" action="{% url 'tracker:task_snooze' task.pk %}"
+          hx-post="{% url 'tracker:task_snooze' task.pk %}"
+          hx-target="#task-{{ task.pk }}" hx-swap="outerHTML" class="inline-form">
+      {% csrf_token %}
+      <input type="hidden" name="days" value="1">
+      <button type="submit" class="icon-btn" title="Snooze 1 day" aria-label="Snooze 1 day">+1d</button>
+    </form>
+    <form method="post" action="{% url 'tracker:task_delete' task.pk %}" class="inline-form" onsubmit="return confirm('Delete this task?')">
+      {% csrf_token %}
+      <button type="submit" class="icon-btn" title="Delete task" aria-label="Delete task">×</button>
+    </form>
+  </div>
+  {% endif %}
+</li>

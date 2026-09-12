@@ -1,0 +1,33 @@
+{% load static %}<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · Job Monitor</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20260912">
+</head>
+<body class="auth-body">
+  <main class="auth-card">
+    <span class="brand brand-lg"><span class="brand-mark" aria-hidden="true"></span> Job Monitor</span>
+    <h1>Sign in</h1>
+    <p class="muted">Local single-user access.</p>
+    {% if form.errors %}
+      <div class="flash flash-error" role="alert">Your username and password didn’t match.</div>
+    {% endif %}
+    <form method="post" class="stack">
+      {% csrf_token %}
+      <label class="field">
+        <span class="field-label">Username</span>
+        <input class="form-input" type="text" name="username" autofocus autocomplete="username" required>
+      </label>
+      <label class="field">
+        <span class="field-label">Password</span>
+        <input class="form-input" type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+      <input type="hidden" name="next" value="{{ next }}">
+    </form>
+  </main>
+</body>
+</html>

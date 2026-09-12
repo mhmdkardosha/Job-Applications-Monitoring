@@ -1,0 +1,22 @@
+# User-level systemd unit for the web app (Plan §9 Phase 6).
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp scripts/job-monitor.service ~/.config/systemd/user/
+#   # edit WorkingDirectory/ExecStart if your checkout path differs
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now job-monitor.service
+#   loginctl enable-linger "$USER"   # keep running when logged out
+[Unit]
+Description=Job Application Monitor (web)
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/vs-code-projects/job_application_monitoring
+ExecStartPre=%h/.local/bin/uv run python manage.py migrate --noinput
+ExecStart=%h/.local/bin/uv run python manage.py runserver 127.0.0.1:8765 --insecure --noreload
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

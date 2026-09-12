@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}Today · Job Monitor{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>Today</h1>
+    <p class="sub">What changed, what needs action, and what is coming up.</p>
+  </div>
+  <div class="row">
+    <button id="notification-enable" class="btn btn-secondary" type="button" hidden>Enable task alerts</button>
+    <a class="btn btn-primary" href="{% url 'tracker:application_create' %}">New application</a>
+  </div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat {% if overdue_count %}is-alert{% endif %}">
+    <div class="label">Overdue follow-ups</div>
+    <div class="value">{{ overdue_count }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Due within 7 days</div>
+    <div class="value">{{ due_soon_count }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Upcoming interviews</div>
+    <div class="value">{{ interview_count }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Active applications</div>
+    <div class="value">{{ active_count }}</div>
+  </div>
+</div>
+
+<div class="detail-layout">
+  <div class="detail-main">
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Needs attention</h2></div>
+      <div class="panel-body stack">
+        {% if due_tasks %}
+          <ul class="task-list">
+            {% for task in due_tasks %}
+            <li class="list-item">
+              <div>
+                <div class="cell-title">{{ task.title }}</div>
+                <div class="small muted">
+                  {% if task.application %}<a href="{% url 'tracker:application_detail' task.application.pk %}">{{ task.application }}</a> · {% endif %}
+                  due {{ task.due_at|date:"d M Y H:i" }}
+                </div>
+              </div>
+              {% if task.due_at < now %}<span class="badge badge-rejected">Overdue</span>{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">No overdue follow-ups. Nice.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Upcoming tasks</h2></div>
+      <div class="panel-body">
+        {% if upcoming_tasks %}
+          <ul class="task-list">
+            {% for task in upcoming_tasks %}
+            <li class="list-item">
+              <div>
+                <div class="cell-title">{{ task.title }}</div>
+                <div class="small muted">
+                  {% if task.application %}<a href="{% url 'tracker:application_detail' task.application.pk %}">{{ task.application }}</a> · {% endif %}
+                  due {{ task.due_at|date:"d M Y H:i" }}
+                </div>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">No tasks due in the next two weeks.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Upcoming interviews</h2></div>
+      <div class="panel-body">
+        {% if upcoming_interviews %}
+          <ul class="task-list">
+            {% for interview in upcoming_interviews %}
+            <li class="list-item">
+              <div>
+                <div class="cell-title">Round {{ interview.round }} · {{ interview.get_kind_display }}</div>
+                <div class="small muted">
+                  <a href="{% url 'tracker:application_detail' interview.application.pk %}">{{ interview.application }}</a>
+                  · {{ interview.scheduled_start|date:"d M Y H:i" }}
+                </div>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">No interviews scheduled in the next two weeks.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Missing job descriptions</h2></div>
+      <div class="panel-body">
+        {% if missing_descriptions %}
+          <p class="small muted">Applied roles with no saved posting yet. Capture them so requirements stay available offline.</p>
+          <ul class="task-list">
+            {% for app in missing_descriptions %}
+            <li class="list-item">
+              <a href="{% url 'tracker:application_detail' app.pk %}">{{ app }}</a>
+              <span class="badge badge-{{ app.stage }}">{{ app.get_stage_display }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">Every applied role has a saved description.</p>
+        {% endif %}
+      </div>
+    </section>
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Suggested follow-ups</h2></div>
+      <div class="panel-body">
+        {% if follow_up_candidates %}
+          <p class="small muted">Applied roles with no open task, past your reminder window.</p>
+          <ul class="task-list">
+            {% for app in follow_up_candidates %}
+            <li class="list-item">
+              <div>
+                <a class="cell-title" href="{% url 'tracker:application_detail' app.pk %}">{{ app.company }} — {{ app.title }}</a>
+                <div class="small muted">Applied {{ app.application_date|date:"d M Y" }}</div>
+              </div>
+              <div class="row" style="gap:6px">
+                <a class="btn btn-ghost btn-sm" href="{% url 'tracker:follow_up_draft' app.pk %}">Draft</a>
+                <form method="post" action="{% url 'tracker:follow_up_create' app.pk %}" class="inline-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{% url 'tracker:today' %}">
+                  <button class="btn btn-secondary btn-sm" type="submit">Create follow-up</button>
+                </form>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">No follow-ups suggested right now.</p>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+
+  <aside class="detail-side">
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Recent activity</h2></div>
+      <div class="panel-body">
+        {% if recent_events %}
+        <ul class="timeline">
+          {% for event in recent_events %}
+          <li class="{% if forloop.first %}is-latest{% endif %}">
+            <div class="what">{{ event.get_event_type_display }}</div>
+            <div class="small">
+              <a href="{% url 'tracker:application_detail' event.application.pk %}">{{ event.application }}</a>
+            </div>
+            <div class="when">{{ event.occurred_at|date:"d M H:i" }}</div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="muted">No activity recorded yet.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="panel panel-tight">
+      <div class="panel-head"><h2>Gmail sync</h2></div>
+      <div class="panel-body">
+        {% if gmail_accounts %}
+          <ul class="task-list">
+            {% for account in gmail_accounts %}
+            <li class="list-item">
+              <div>
+                <div class="cell-title">{{ account.email }}</div>
+                <div class="small muted">Last sync: {{ account.last_sync_at|date:"d M Y H:i"|default:"never" }}</div>
+              </div>
+              <span class="badge {% if account.connection_state == 'connected' %}badge-applied{% else %}badge-rejected{% endif %}">
+                {{ account.get_connection_state_display }}
+              </span>
+            </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">No Gmail account connected yet. Connect one from <a href="{% url 'tracker:settings' %}">Settings</a>.</p>
+        {% endif %}
+      </div>
+    </section>
+  </aside>
+</div>
+{{ notifications|json_script:"jm-notifications" }}
+<script>
+  (function () {
+    const el = document.getElementById("jm-notifications");
+    if (!el || !("Notification" in window)) return;
+    const items = JSON.parse(el.textContent || "[]");
+    if (!items.length) return;
+    const now = new Date();
+    const key = "jm-notified-" + [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
+    let seen = [];
+    try { seen = JSON.parse(localStorage.getItem(key) || "[]"); } catch (e) { seen = []; }
+    function notify() {
+      items.forEach((task) => {
+        if (seen.includes(String(task.id))) return;
+        try {
+          new Notification("Job Monitor: task due", { body: task.title });
+          seen.push(String(task.id));
+        } catch (e) { /* ignore */ }
+      });
+      localStorage.setItem(key, JSON.stringify(seen));
+    }
+    if (Notification.permission === "granted") return notify();
+    const button = document.getElementById("notification-enable");
+    if (!button || Notification.permission === "denied") return;
+    button.hidden = false;
+    button.addEventListener("click", function () {
+      button.disabled = true;
+      Notification.requestPermission().then((permission) => {
+        button.hidden = permission !== "default";
+        button.disabled = false;
+        if (permission === "granted") notify();
+      });
+    });
+  })();
+</script>
+{% endblock %}

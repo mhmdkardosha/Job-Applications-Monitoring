@@ -1,0 +1,10 @@
+# Gmail sync worker (oneshot). Install with job-monitor-sync.timer.
+[Unit]
+Description=Job Application Monitor Gmail sync
+After=network-online.target job-monitor.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/vs-code-projects/job_application_monitoring
+ExecStart=%h/.local/bin/uv run python manage.py gmail_sync --all

@@ -1,0 +1,13 @@
+# Daily backup timer. Install:
+#   cp scripts/job-monitor-backup.* ~/.config/systemd/user/
+#   systemctl --user enable --now job-monitor-backup.timer
+[Unit]
+Description=Run the Job Monitor backup daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

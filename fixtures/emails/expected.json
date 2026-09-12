@@ -1,0 +1,37 @@
+{
+  "confirmation.json": {
+    "event_type": "application_confirmation",
+    "company": "Acme Corp",
+    "role": "Senior Backend Engineer",
+    "requisition_id": "12345",
+    "has_interview_time": false
+  },
+  "interview.json": {
+    "event_type": "interview_invitation",
+    "company": "Acme Corp",
+    "role": "Senior Backend Engineer",
+    "requisition_id": "12345",
+    "has_interview_time": true
+  },
+  "rejection.json": {
+    "event_type": "rejection",
+    "company": "Acme Corp",
+    "role": "Senior Backend Engineer",
+    "requisition_id": "",
+    "has_interview_time": false
+  },
+  "newsletter.json": {
+    "event_type": "unrelated",
+    "company": "",
+    "role": "",
+    "requisition_id": "",
+    "has_interview_time": false
+  },
+  "second_role_same_company.json": {
+    "event_type": "application_confirmation",
+    "company": "Acme Corp",
+    "role": "Staff Platform Engineer",
+    "requisition_id": "99887",
+    "has_interview_time": false
+  }
+}

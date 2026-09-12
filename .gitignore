@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.playwright-cli/
+
+# Environment / secrets — never commit
+.env
+.env.*
+!.env.example
+credentials.json
+client_secret*.json
+token.json
+*.pem
+
+# Local app data
+data/
+media/
+backups/
+*.sqlite3
+*.db
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

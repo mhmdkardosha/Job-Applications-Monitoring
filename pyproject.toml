@@ -1,0 +1,47 @@
+[project]
+name = "job-application-monitor"
+version = "0.1.0"
+description = "Personal job application monitor: Gmail detection, posting archive, follow-ups and reports."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.1,<6",
+    "google-auth-oauthlib>=1.2",
+    "google-api-python-client>=2.140",
+    "openai>=1.50",
+    "keyring>=25.4",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.3",
+    "trafilatura>=1.12",
+    "requests>=2.32",
+    "python-dotenv>=1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-django>=4.9",
+    "ruff>=0.6",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "DJ"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"*/settings.py" = ["F403", "F405"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py", "tests.py"]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::django.utils.deprecation.RemovedInDjango60Warning",
+]

@@ -1,0 +1,29 @@
+{% if applications %}
+  {% for app in applications %}
+  <tr>
+    <td class="cell-title">
+      <a href="{% url 'tracker:application_detail' app.pk %}">{{ app.company }}</a>
+      {% if app.is_archived %}<span class="badge">Archived</span>{% endif %}
+    </td>
+    <td>
+      <div>{{ app.title }}</div>
+      {% if app.requisition_id %}<div class="cell-sub mono">Req {{ app.requisition_id }}</div>{% endif %}
+    </td>
+    <td><span class="badge badge-{{ app.stage }}">{{ app.get_stage_display }}</span></td>
+    <td><span class="prio prio-{{ app.priority }}">{{ app.get_priority_display }}</span></td>
+    <td>{{ app.location|default:"—" }}</td>
+    <td class="nowrap">{{ app.application_date|date:"d M Y"|default:"—" }}</td>
+    <td class="nowrap muted small">{{ app.updated_at|date:"d M Y" }}</td>
+  </tr>
+  {% endfor %}
+{% else %}
+  <tr>
+    <td colspan="7">
+      <div class="empty">
+        <h3>No applications match</h3>
+        <p>Adjust the filters, or add your first application.</p>
+        <a class="btn btn-primary btn-sm" href="{% url 'tracker:application_create' %}">New application</a>
+      </div>
+    </td>
+  </tr>
+{% endif %}

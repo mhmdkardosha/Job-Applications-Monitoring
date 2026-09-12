@@ -1,0 +1,11 @@
+<form id="stage-control"
+      method="post"
+      action="{% url 'tracker:application_set_stage' application.pk %}">
+  {% csrf_token %}
+  <label class="field-label" for="stage-select">Stage</label>
+  <select id="stage-select" name="stage" class="form-select" onchange="this.form.requestSubmit()">
+    {% for value, label in stages %}
+    <option value="{{ value }}" {% if application.stage == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+</form>

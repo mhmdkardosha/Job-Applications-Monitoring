@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'edit' %}Edit{% else %}New{% endif %} application · Job Monitor{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>{% if mode == 'edit' %}Edit application{% else %}New application{% endif %}</h1>
+    <p class="sub">Unknown values can stay blank. Saving a vacancy is not the same as submitting an application.</p>
+  </div>
+</div>
+
+<form method="post" class="panel" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+    <div class="flash flash-error">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <div class="form-grid">
+    {% for field in form %}
+      <div class="field {% if field.name == 'notes' %}span-2{% endif %}">
+        <label class="field-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<span class="field-hint">{{ field.help_text }}</span>{% endif %}
+        {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">{% if mode == 'edit' %}Save changes{% else %}Create application{% endif %}</button>
+    {% if application %}<a class="btn btn-secondary" href="{% url 'tracker:application_detail' application.pk %}">Cancel</a>
+    {% else %}<a class="btn btn-secondary" href="{% url 'tracker:application_list' %}">Cancel</a>{% endif %}
+  </div>
+</form>
+{% endblock %}
